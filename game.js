@@ -24,7 +24,24 @@ const THRUSTER_BASE_WIDTH = 0.7; const THRUSTER_BASE_LENGTH = 0.7; const THRUSTE
 function isWebGLAvailable() { try { const canvas = document.createElement( 'canvas' ); return !! ( window.WebGLRenderingContext && ( canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' ) ) ); } catch ( e ) { return false; } }
 
 // --- Splash / Start Logic ---
-function showSplashScreen() { if (!isWebGLAvailable()) { console.error("WebGL check failed!"); document.getElementById('webgl-error').style.display = 'block'; return; } console.log("DEBUG: WebGL check passed."); document.getElementById('splashScreen').style.display = 'flex'; document.getElementById('info').style.display = 'none'; document.getElementById('gameOver').style.display = 'none'; document.getElementById('countdown').style.display = 'none'; }
+function showSplashScreen() { 
+    if (!isWebGLAvailable()) { 
+        console.error("WebGL check failed!"); 
+        document.getElementById('webgl-error').style.display = 'block'; 
+        return; 
+    } 
+    console.log("DEBUG: WebGL check passed."); 
+    document.getElementById('splashScreen').style.display = 'flex'; 
+    document.getElementById('info').style.display = 'none'; 
+    document.getElementById('gameOver').style.display = 'none'; 
+    document.getElementById('countdown').style.display = 'none'; 
+    // Attempt to focus the window
+    window.focus();
+    // Ensure Spacebar handler is attached
+    window.removeEventListener('keydown', handleInitialSplashInput); // Remove any previous
+    window.addEventListener('keydown', handleInitialSplashInput); 
+    console.log('[PeachBlaster] Spacebar event listener attached for initial splash');
+}
 function handleSplashInput(event) { console.log(`DEBUG: handleSplashInput - KeyDown: key='${event.key}', code='${event.code}'`); if (event.key === ' ' || event.code === 'Space') { console.log("DEBUG: Spacebar detected!"); event.preventDefault(); window.removeEventListener('keydown', handleSplashInput); console.log("DEBUG: Listener removed."); document.getElementById('splashScreen').style.display = 'none'; document.getElementById('info').style.display = 'block'; if (!gameInitialized) { console.log("DEBUG: Calling init()."); init(); if (!renderer) { console.error("DEBUG: handleSplashInput - init() failed!"); alert("Critical Error: Graphics init failed. Check console."); return; } console.log("DEBUG: handleSplashInput - init() succeeded check."); } else { console.log("DEBUG: Already initialized."); } if (!renderer) { console.error("DEBUG: Renderer missing before countdown!"); alert("Error: Graphics component missing."); return; } console.log(">>> DEBUG: Calling startCountdown() NOW. <<<"); startCountdown(); } }
 
 // --- startCountdown Function Definition ---
