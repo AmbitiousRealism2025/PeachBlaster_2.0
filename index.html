@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peach Blaster 2.0.22 (Variable Thruster Fix)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+     <div id="webgl-error" style="display: none; position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background-color: #500; color: white; text-align: center; z-index: 300; font-family: sans-serif;"> Error: Your browser does not seem to support WebGL... </div>
+     <div id="splashScreen"> <h1>PEACH BLASTER</h1> <p>BLAST THE FUZZY FRUIT!</p> <div class="controls"> Controls:<br> [A] - ROTATE LEFT<br> [D] - ROTATE RIGHT<br> [W] - THRUST FORWARD<br> [SPACE] - FIRE BLASTS </div> <p>SHOOT PEACHES. AVOID COLLISIONS!</p> <p class="start-prompt">PRESS SPACE TO START</p> </div>
+     <div id="countdown"></div> <!-- Ensure this exists -->
+     <div id="info"> Score: <span id="score">0</span> | Lives: <span id="lives">3</span> </div>
+     <div id="gameOver"> GAME OVER! <br> Final Score: <span id="finalScore">0</span> <br> <button onclick="restartGame()">RESTART</button> </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
