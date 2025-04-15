@@ -24,7 +24,7 @@ const THRUSTER_BASE_WIDTH = 0.7; const THRUSTER_BASE_LENGTH = 0.7; const THRUSTE
 function isWebGLAvailable() { try { const canvas = document.createElement( 'canvas' ); return !! ( window.WebGLRenderingContext && ( canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' ) ) ); } catch ( e ) { return false; } }
 
 // --- Splash / Start Logic ---
-function showSplashScreen() { if (!isWebGLAvailable()) { console.error("WebGL check failed!"); document.getElementById('webgl-error').style.display = 'block'; return; } console.log("DEBUG: WebGL check passed."); document.getElementById('splashScreen').style.display = 'flex'; document.getElementById('info').style.display = 'none'; document.getElementById('gameOver').style.display = 'none'; document.getElementById('countdown').style.display = 'none'; window.removeEventListener('keydown', handleSplashInput); window.addEventListener('keydown', handleSplashInput); console.log("DEBUG: showSplashScreen - Listener added."); }
+function showSplashScreen() { if (!isWebGLAvailable()) { console.error("WebGL check failed!"); document.getElementById('webgl-error').style.display = 'block'; return; } console.log("DEBUG: WebGL check passed."); document.getElementById('splashScreen').style.display = 'flex'; document.getElementById('info').style.display = 'none'; document.getElementById('gameOver').style.display = 'none'; document.getElementById('countdown').style.display = 'none'; }
 function handleSplashInput(event) { console.log(`DEBUG: handleSplashInput - KeyDown: key='${event.key}', code='${event.code}'`); if (event.key === ' ' || event.code === 'Space') { console.log("DEBUG: Spacebar detected!"); event.preventDefault(); window.removeEventListener('keydown', handleSplashInput); console.log("DEBUG: Listener removed."); document.getElementById('splashScreen').style.display = 'none'; document.getElementById('info').style.display = 'block'; if (!gameInitialized) { console.log("DEBUG: Calling init()."); init(); if (!renderer) { console.error("DEBUG: handleSplashInput - init() failed!"); alert("Critical Error: Graphics init failed. Check console."); return; } console.log("DEBUG: handleSplashInput - init() succeeded check."); } else { console.log("DEBUG: Already initialized."); } if (!renderer) { console.error("DEBUG: Renderer missing before countdown!"); alert("Error: Graphics component missing."); return; } console.log(">>> DEBUG: Calling startCountdown() NOW. <<<"); startCountdown(); } }
 
 // --- startCountdown Function Definition ---
@@ -115,10 +115,27 @@ function updatePlayer(dt) {
     if (d.invincible) { d.invincibleTimer -= dt * 1000; const body = playerShip.getObjectByName("playerBody"); if (body) { body.visible = Math.floor(d.invincibleTimer / 100) % 2 === 0; } else { playerShip.visible = Math.floor(d.invincibleTimer / 100) % 2 === 0; } if (d.invincibleTimer <= 0) { d.invincible = false; if (body) body.visible = true; else playerShip.visible = true; } } else { const body = playerShip.getObjectByName("playerBody"); if (body) body.visible = true; else playerShip.visible = true; }
 }
 
-function updateBullets(dt, arr) { const removeIdx = []; const margin = 10; for (let i=arr.length-1; i>=0; i--) { const b = arr[i]; if (!b) continue; b.position.add(b.userData.velocity.clone().multiplyScalar(dt)); if (Math.abs(b.position.x) > WORLD_WIDTH/2+margin || Math.abs(b.position.y) > WORLD_HEIGHT/2+margin) removeIdx.push(i); } for (let i = removeIdx.length-1; i >= 0; i--) { const idx = removeIdx[i]; if (arr[idx]) removeObject(arr[idx]); arr.splice(idx, 1); } }
+function updateBullets(dt, arr) { const removeIdx = []; const margin = 10; for (let i=arr.length-1; i>=0; i--) { const b=arr[i]; if (!b || !b.userData) continue; b.position.add(b.userData.velocity.clone().multiplyScalar(dt)); if (Math.abs(b.position.x) > WORLD_WIDTH/2+margin || Math.abs(b.position.y) > WORLD_HEIGHT/2+margin) removeIdx.push(i); } for (let i = removeIdx.length-1; i >= 0; i--) { const idx = removeIdx[i]; if (arr[idx]) removeObject(arr[idx]); arr.splice(idx, 1); } }
 function updatePeaches(dt) { peaches.forEach((h) => { if (!h || !h.userData || !h.position) return; if (h.userData.velocity.lengthSq() > 0.001) h.position.add(h.userData.velocity.clone().multiplyScalar(dt)); h.rotation.x += 0.1*dt*(h.userData.velocity.length()/PEACH_MAX_SPEED); h.rotation.y += 0.15*dt*(h.userData.velocity.length()/PEACH_MAX_SPEED); wrapAroundScreen(h.position, h.userData.radius); }); }
 function handleSpawning() { if (!gameRunning) return; const n = Date.now(); if (peaches.length < MAX_PEACHES && n - lastPeachSpawnTime > PEACH_SPAWN_INTERVAL) { const h = createPeach('large'); peaches.push(h); if(scene) scene.add(h); lastPeachSpawnTime = n; } }
-function handleKeyDown(event) { if (!gameRunning && document.getElementById('splashScreen').style.display === 'none') return; const k = event.key.toLowerCase(); if (document.getElementById('splashScreen').style.display !== 'none') { if (k === ' ') return; } if (gameRunning) { keysPressed[k] = true; if ([' ', 'w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) event.preventDefault(); } }
+function handleKeyDown(event) {
+    const splash = document.getElementById('splashScreen');
+    const controls = document.getElementById('controlsScreen');
+    // If splash is visible OR game isn't running AND game over screen isn't visible, ignore key presses
+    if ((splash && splash.style.display !== 'none') || 
+        (controls && controls.style.display !== 'none') || 
+        (!gameRunning && (!document.getElementById('gameOver') || document.getElementById('gameOver').style.display === 'none'))) {
+        return; 
+    }
+
+    // If we reach here, splash is hidden and game *should* be running
+    const k = event.key.toLowerCase();
+    keysPressed[k] = true;
+    // Prevent default browser action for game keys (scrolling, etc.)
+    if ([' ', 'w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) {
+        event.preventDefault();
+    }
+}
 function handleKeyUp(event) { const k = event.key.toLowerCase(); keysPressed[k] = false; }
 function shoot(shooter, isPlayer) { if (!shooter || !shooter.userData) return; const offset = (shooter.userData.radius||2)+1; const dir = new THREE.Vector3(0, 1, 0); dir.applyQuaternion(shooter.quaternion).normalize(); const pos = shooter.position.clone().add(dir.clone().multiplyScalar(offset)); const bullet = createBullet(pos, dir, isPlayer); if (isPlayer) playerBullets.push(bullet); if(scene) scene.add(bullet); else console.error("!!! Cannot add bullet - scene missing!"); }
 function detectCollisions() { if (!gameRunning || !playerShip || !playerShip.userData ) return; for (let i=playerBullets.length-1; i>=0; i--) { const b=playerBullets[i]; if (!b || !b.userData) continue; let hit=false; for (let j=peaches.length-1; j>=0; j--) { const p=peaches[j]; if (!p || !p.userData) continue; if (checkCollision(b, p)) { removeObject(b); playerBullets.splice(i, 1); breakPeach(p); hit=true; break; } } if (hit) continue; } if (!playerShip.userData.invincible) { for (let j=peaches.length-1; j>=0; j--) { const p=peaches[j]; if (!p || !p.userData) continue; if (checkCollision(playerShip, p)) { handlePlayerHit(); break; } } } }
@@ -130,5 +147,118 @@ function wrapAroundScreen(pos, r) { const b=r*1.5, hw=WORLD_WIDTH/2, hh=WORLD_HE
 function onWindowResize() { if (!camera || !renderer) return; camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
 function endGame() { console.log("DEBUG: endGame called."); gameOver = true; gameRunning = false; if (playerShip) { playerShip.visible = false; } document.getElementById('finalScore').textContent = score; document.getElementById('gameOver').style.display = 'block'; document.getElementById('info').style.display = 'none'; if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; } document.getElementById('countdown').style.display = 'none'; }
 function restartGame() { console.log("DEBUG: restartGame called."); document.getElementById('gameOver').style.display = 'none'; gameRunning = false; gameOver = false; if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; } document.getElementById('countdown').style.display = 'none'; console.log("DEBUG: restartGame calling startGameplay..."); startGameplay(); }
-function spawnInitialPeaches(count) { if (!playerShip) { console.error("!!! Cannot spawn peaches - player missing!"); return;} const minSpawnDistSq = Math.pow((playerShip.userData.radius||3)*6, 2); for (let i=0; i<count; i++) { let pos, attempts = 0; do { pos = new THREE.Vector3( THREE.MathUtils.randFloatSpread(WORLD_WIDTH*0.8), THREE.MathUtils.randFloatSpread(WORLD_HEIGHT*0.8), 0 ); attempts++; } while (playerShip && pos.distanceToSquared(playerShip.position) < minSpawnDistSq && attempts < 30); if (attempts >= 30) { console.warn("Could not place initial peach far enough from center."); const edge=Math.floor(Math.random()*4), buffer=10; if (edge===0) pos.set(THREE.MathUtils.randFloatSpread(WORLD_WIDTH), WORLD_HEIGHT/2+buffer, 0); else if (edge===1) pos.set(THREE.MathUtils.randFloatSpread(WORLD_WIDTH), -WORLD_HEIGHT/2-buffer, 0); else if (edge===2) pos.set(-WORLD_WIDTH/2-buffer, THREE.MathUtils.randFloatSpread(WORLD_HEIGHT), 0); else pos.set(WORLD_WIDTH/2+buffer, THREE.MathUtils.randFloatSpread(WORLD_HEIGHT), 0); } const peach=createPeach('large', pos); peaches.push(peach); if(scene) scene.add(peach); else console.error("!!! Cannot add peach - scene missing!") } lastPeachSpawnTime = Date.now(); }
-document.addEventListener('DOMContentLoaded', () => { console.log("DEBUG: DOMContentLoaded..."); showSplashScreen(); });
+
+// --- RE-INSERTED MISSING FUNCTION ---
+function spawnInitialPeaches(count) { 
+    if (!playerShip) { console.error("!!! Cannot spawn peaches - player missing!"); return;}
+    const minSpawnDistSq = Math.pow((playerShip.userData.radius||3)*6, 2);
+    for (let i=0; i<count; i++) { 
+        let pos, attempts = 0;
+        do { 
+            pos = new THREE.Vector3( THREE.MathUtils.randFloatSpread(WORLD_WIDTH*0.8), THREE.MathUtils.randFloatSpread(WORLD_HEIGHT*0.8), 0 ); 
+            attempts++; 
+        } while (playerShip && pos.distanceToSquared(playerShip.position) < minSpawnDistSq && attempts < 30);
+        
+        if (attempts >= 30) { 
+            console.warn("Could not place initial peach far enough from center."); 
+            const edge=Math.floor(Math.random()*4), buffer=10;
+            if (edge===0) pos.set(THREE.MathUtils.randFloatSpread(WORLD_WIDTH), WORLD_HEIGHT/2+buffer, 0); 
+            else if (edge===1) pos.set(THREE.MathUtils.randFloatSpread(WORLD_WIDTH), -WORLD_HEIGHT/2-buffer, 0); 
+            else if (edge===2) pos.set(-WORLD_WIDTH/2-buffer, THREE.MathUtils.randFloatSpread(WORLD_HEIGHT), 0); 
+            else pos.set(WORLD_WIDTH/2+buffer, THREE.MathUtils.randFloatSpread(WORLD_HEIGHT), 0); 
+        } 
+        const peach=createPeach('large', pos);
+        peaches.push(peach); 
+        if(scene) scene.add(peach); 
+        lastPeachSpawnTime = Date.now(); 
+    } 
+}
+
+// NEW function to handle Spacebar on the *first* splash screen
+function handleInitialSplashInput(event) {
+    const initialSplash = document.getElementById('splashScreen');
+    // Only react if the first splash is visible and Spacebar is pressed
+    if (initialSplash && initialSplash.style.display !== 'none' && (event.key === ' ' || event.code === 'Space')) {
+        console.log("DEBUG: Spacebar detected on initial splash screen!");
+        event.preventDefault();
+
+        const controlsSplash = document.getElementById('controlsScreen');
+
+        initialSplash.style.display = 'none'; // Hide initial splash
+
+        if (controlsSplash) {
+            controlsSplash.style.display = 'flex'; // Show controls splash
+            console.log("DEBUG: Adding handleSpaceForControls listener.");
+            // Add listener for the *next* stage (controls screen)
+            window.addEventListener('keydown', handleSpaceForControls);
+        } else {
+            console.error("ERROR: Controls screen element not found!");
+        }
+
+        // Remove this listener so it doesn't fire again
+        console.log("DEBUG: Removing handleInitialSplashInput listener.");
+        window.removeEventListener('keydown', handleInitialSplashInput);
+    }
+}
+
+// Handles the Spacebar press ONLY when the controls screen is visible
+function handleSpaceForControls(event) {
+    const controlsVisible = document.getElementById('controlsScreen') && document.getElementById('controlsScreen').style.display !== 'none';
+    console.log(`DEBUG: handleSpaceForControls - Key='${event.key}', Visible=${controlsVisible}`);
+    if (controlsVisible && (event.key === ' ' || event.code === 'Space')) {
+        console.log("DEBUG: Spacebar detected on controls screen!");
+        event.preventDefault();
+        document.getElementById('controlsScreen').style.display = 'none'; // Hide controls screen
+        document.getElementById('info').style.display = 'block'; // Show score/lives info
+        
+        // Initialize game if not already done (important!)
+        if (!gameInitialized) {
+            console.log("DEBUG: Calling init() from handleSpaceForControls.");
+            init(); 
+            if (!renderer) {
+                console.error("DEBUG: handleSpaceForControls - init() failed!");
+                alert("Critical Error: Graphics init failed. Check console.");
+                return;
+            }
+            console.log("DEBUG: handleSpaceForControls - init() succeeded check.");
+        } else {
+            console.log("DEBUG: Game already initialized (handleSpaceForControls).");
+        }
+
+        // Remove this specific listener
+        window.removeEventListener('keydown', handleSpaceForControls);
+        console.log("DEBUG: handleSpaceForControls listener removed.");
+
+        // Start the actual game countdown
+        console.log(">>> DEBUG: Calling startCountdown() NOW from handleSpaceForControls. <<<");
+        startCountdown(); 
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DEBUG: DOMContentLoaded...");
+
+    // Cache DOM elements
+    const scoreElement = document.getElementById('score');
+    const livesElement = document.getElementById('lives');
+    const gameOverElement = document.getElementById('gameOver');
+    const finalScoreElement = document.getElementById('finalScore');
+    const countdownElement = document.getElementById('countdown');
+    const splashScreenElement = document.getElementById('splashScreen');
+    const controlsScreenElement = document.getElementById('controlsScreen');
+    const infoElement = document.getElementById('info');
+    const webglErrorElement = document.getElementById('webgl-error');
+
+    // Initial setup: Show the image splash screen
+    showSplashScreen(); // This function now just displays #splashScreen
+
+    // Add the new listener for the initial splash screen
+    window.addEventListener('keydown', handleInitialSplashInput);
+    console.log("DEBUG: Added initial splash screen keydown listener.");
+
+    // Restore global listeners
+    window.addEventListener('keydown', handleKeyDown); // Handles game controls
+    window.addEventListener('keyup', handleKeyUp); 
+    window.addEventListener('resize', onWindowResize);
+
+}); // <-- Make sure this closes the DOMContentLoaded listener

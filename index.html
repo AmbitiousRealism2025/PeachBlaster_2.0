@@ -11,7 +11,24 @@
 </head>
 <body>
      <div id="webgl-error" style="display: none; position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background-color: #500; color: white; text-align: center; z-index: 300; font-family: sans-serif;"> Error: Your browser does not seem to support WebGL... </div>
-     <div id="splashScreen"> <h1>PEACH BLASTER</h1> <p>BLAST THE FUZZY FRUIT!</p> <div class="controls"> Controls:<br> [A] - ROTATE LEFT<br> [D] - ROTATE RIGHT<br> [W] - THRUST FORWARD<br> [SPACE] - FIRE BLASTS </div> <p>SHOOT PEACHES. AVOID COLLISIONS!</p> <p class="start-prompt">PRESS SPACE TO START</p> </div>
+     <div id="splashScreen">
+        <h1>Peach Blaster</h1>
+        <img id="splashImage" src="placeholder-splash.png" alt="Peach Blaster Splash Screen">
+        <p class="flash">Press SPACEBAR to Insert Coin</p>
+     </div>
+     <div id="controlsScreen" style="display: none;">
+        <h1>PEACH BLASTER</h1>
+        <p>BLAST THE FUZZY FRUIT!</p>
+        <div class="controls">
+            Controls:<br>
+            [A] or [←] - ROTATE LEFT<br>
+            [D] or [→] - ROTATE RIGHT<br>
+            [W] or [↑] - THRUST FORWARD<br>
+            [Space] - FIRE BLASTS
+        </div>
+        <p>SHOOT PEACHES. AVOID COLLISIONS!</p>
+        <p class="start-prompt">PRESS SPACE TO START</p>
+    </div>
      <div id="countdown"></div> <!-- Ensure this exists -->
      <div id="info"> Score: <span id="score">0</span> | Lives: <span id="lives">3</span> </div>
      <div id="gameOver"> GAME OVER! <br> Final Score: <span id="finalScore">0</span> <br> <button onclick="restartGame()">RESTART</button> </div>
