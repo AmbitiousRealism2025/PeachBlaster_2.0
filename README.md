@@ -2,8 +2,16 @@
 
 A simple HTML/CSS/JavaScript game using the Three.js library.
 
-## How to Run
+## Running the Game
 
+The primary way to run Peach Blaster is by opening the `index.html` file directly in a modern web browser that supports WebGL.
+
+1.  Navigate to the directory where you have the game files.
+2.  Double-click `index.html` or use your browser's "Open File" option to load it.
+
+**Alternative Method (if encountering issues or for development):**
+
+If you experience any issues with direct file access (though uncommon for this type of project) or prefer a local server environment:
 1. Ensure you have Python installed.
 2. Open a terminal or command prompt in this directory.
 3. Run the command: `python -m http.server`
@@ -31,6 +39,7 @@ Pilot your ship through a field of hazardous peaches! Blast the fuzzy fruit befo
 ## Original Objectives [cite: 1]
 
 * Create a modern interpretation of "Asteroids" in a single HTML file using Three.js (CDN)[cite: 1].
+*(Note: While the initial concept aimed for a single HTML file, the project is currently organized with separate JavaScript (`game.js`) and CSS (`style.css`) files for better maintainability and development clarity, all linked from `index.html`.)*
 * Replace asteroids with "Peaches" of varying sizes[cite: 2].
 * Initially planned to replace the enemy saucer with "Robotic Bees/Wasps" (simplified later)[cite: 2, 13].
 * Implement modern graphics, sound (planned), and power-ups (simplified later)[cite: 3, 13].
@@ -63,6 +72,8 @@ Pilot your ship through a field of hazardous peaches! Blast the fuzzy fruit befo
 
 ## Development Changelog Highlights
 
+*Note: `[cite: XX]` numbers are internal development references and can be disregarded by users/contributors.*
+
 * **Initial Setup:** Basic Three.js scene, core mechanics (ship, peaches, shooting)[cite: 6, 35].
 * **Splash/Countdown:** Added start screen and countdown timer[cite: 8]. Debugged startup issues[cite: 11].
 * **Simplification:** Removed initial enemy/power-up concepts to focus on core gameplay[cite: 13].
@@ -92,8 +103,3 @@ Pilot your ship through a field of hazardous peaches! Blast the fuzzy fruit befo
     * Further tweaks to ship model/lines/colors[cite: 89].
     * Adjust peach texture appearance[cite: 89].
     * Tweak thruster animation (e.g., color shift based on intensity)[cite: 90].
-
-## Setup
-
-1.  Clone this repository.
-2.  Open the `index.html` file in your web browser. (Requires a browser with WebGL support).
