@@ -24,6 +24,42 @@ const peachTextureCache = {};
 // Explosion Constants
 const EXPLOSION_PARTICLE_COUNT = 25; const EXPLOSION_PARTICLE_SIZE = 0.5; const EXPLOSION_MIN_SPEED = 20; const EXPLOSION_MAX_SPEED = 60; const EXPLOSION_LIFESPAN = 0.7; const EXPLOSION_DAMPING = 0.1;
 
+function createExplosion(position) {
+    if (!scene) return;
+    for (let i = 0; i < EXPLOSION_PARTICLE_COUNT; i++) {
+        const geometry = new THREE.SphereGeometry(EXPLOSION_PARTICLE_SIZE, 4, 4);
+        const material = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const particle = new THREE.Mesh(geometry, material);
+        particle.position.copy(position);
+        const speed = THREE.MathUtils.randFloat(EXPLOSION_MIN_SPEED, EXPLOSION_MAX_SPEED);
+        const dir = new THREE.Vector3(
+            THREE.MathUtils.randFloatSpread(1),
+            THREE.MathUtils.randFloatSpread(1),
+            THREE.MathUtils.randFloatSpread(1)
+        ).normalize();
+        particle.userData = {
+            velocity: dir.multiplyScalar(speed),
+            life: EXPLOSION_LIFESPAN
+        };
+        explosionParticles.push(particle);
+        scene.add(particle);
+    }
+}
+
+function updateExplosionParticles(dt) {
+    for (let i = explosionParticles.length - 1; i >= 0; i--) {
+        const p = explosionParticles[i];
+        if (!p || !p.userData) continue;
+        p.userData.velocity.multiplyScalar(Math.max(0, 1 - EXPLOSION_DAMPING * dt));
+        p.position.add(p.userData.velocity.clone().multiplyScalar(dt));
+        p.userData.life -= dt;
+        if (p.userData.life <= 0) {
+            removeObject(p);
+            explosionParticles.splice(i, 1);
+        }
+    }
+}
+
 // Thruster Constants
 const THRUSTER_BASE_WIDTH = 0.7; const THRUSTER_BASE_LENGTH = 0.7; const THRUSTER_MAX_LENGTH_SCALE = 4.0; const THRUSTER_RAMP_UP_SPEED = 2.5; const THRUSTER_RAMP_DOWN_SPEED = 3.5; const THRUSTER_VISIBLE_THRESHOLD = 0.01;
 
@@ -111,7 +147,7 @@ function updateStarfieldBlinks(deltaTime) { const NaNValue = NaN; if (!starfield
 function resetStarfieldBlinks() { let mainPositionsNeedUpdate = false; let restoredCount = 0; if (starPositionsAttribute && originalStarPositions.length === NUM_STARS * 3) { for (let i = 0; i < NUM_STARS; i++) { const originalX = originalStarPositions[i * 3]; const originalY = originalStarPositions[i * 3 + 1]; const originalZ = originalStarPositions[i * 3 + 2]; starPositionsAttribute.setXYZ(i, originalX, originalY, originalZ); restoredCount++; } mainPositionsNeedUpdate = true; } else { console.error("!!! Cannot reset star positions: Attribute or original positions missing/invalid!"); } let hiddenBlinkers = 0; blinkerPool.forEach((blinker, index) => { blinker.visible = false; if(blinker.material) blinker.material.opacity = 0; hiddenBlinkers++; }); const oldActiveBlinksCount = activeBlinks.length; activeBlinks = []; const resetTime = clock.elapsedTime; lastBlinkCheckTime = resetTime; if (mainPositionsNeedUpdate && starPositionsAttribute) { starPositionsAttribute.needsUpdate = true; } }
 
 // --- Game Loop & Updates ---
-function animate() { if (!gameRunning) return; requestAnimationFrame(animate); const dt = Math.min(clock.getDelta(), 0.1); try { updatePlayer(dt); updateBullets(dt, playerBullets); updatePeaches(dt); updateStarfieldBlinks(dt); handleSpawning(); detectCollisions(); } catch (e) { console.error("!!! animate - Error during UPDATE !!!", e); gameRunning = false; endGame(); return; } if (renderer && scene && camera) { try { renderer.render(scene, camera); } catch(e) { console.error("!!! animate - Error during RENDER !!!", e); gameRunning = false; endGame(); } } else if (gameRunning) { console.error("!!! animate - Render components missing!"); gameRunning = false; endGame(); } }
+function animate() { if (!gameRunning) return; requestAnimationFrame(animate); const dt = Math.min(clock.getDelta(), 0.1); try { updatePlayer(dt); updateBullets(dt, playerBullets); updatePeaches(dt); updateExplosionParticles(dt); updateStarfieldBlinks(dt); handleSpawning(); detectCollisions(); } catch (e) { console.error("!!! animate - Error during UPDATE !!!", e); gameRunning = false; endGame(); return; } if (renderer && scene && camera) { try { renderer.render(scene, camera); } catch(e) { console.error("!!! animate - Error during RENDER !!!", e); gameRunning = false; endGame(); } } else if (gameRunning) { console.error("!!! animate - Render components missing!"); gameRunning = false; endGame(); } }
 
 // --- FIXED: updatePlayer removed bad vertex reference ---
 function updatePlayer(dt) {
@@ -195,7 +231,7 @@ function handleKeyUp(event) { const k = event.key.toLowerCase(); keysPressed[k] 
 function shoot(shooter, isPlayer) { if (!shooter || !shooter.userData) return; const offset = (shooter.userData.radius||2)+1; const dir = new THREE.Vector3(0, 1, 0); dir.applyQuaternion(shooter.quaternion).normalize(); const pos = shooter.position.clone().add(dir.clone().multiplyScalar(offset)); const bullet = createBullet(pos, dir, isPlayer); if (isPlayer) playerBullets.push(bullet); if(scene) scene.add(bullet); else console.error("!!! Cannot add bullet - scene missing!"); }
 function detectCollisions() { if (!gameRunning || !playerShip || !playerShip.userData ) return; for (let i=playerBullets.length-1; i>=0; i--) { const b=playerBullets[i]; if (!b || !b.userData) continue; let hit=false; for (let j=peaches.length-1; j>=0; j--) { const p=peaches[j]; if (!p || !p.userData) continue; if (checkCollision(b, p)) { removeObject(b); playerBullets.splice(i, 1); breakPeach(p); hit=true; break; } } if (hit) continue; } if (!playerShip.userData.invincible) { for (let j=peaches.length-1; j>=0; j--) { const p=peaches[j]; if (!p || !p.userData) continue; if (checkCollision(playerShip, p)) { handlePlayerHit(); break; } } } }
 function checkCollision(o1, o2) { if (!o1 || !o2 || !o1.userData || !o2.userData || !o1.position || !o2.position) return false; const dSq=o1.position.distanceToSquared(o2.position); const r1=o1.userData.radius||1; const r2=o2.userData.radius||1; const rSumSq=(r1+r2)*(r1+r2); return dSq<=rSumSq; }
-function handlePlayerHit() { if (!playerShip || !playerShip.userData || playerShip.userData.invincible) return; console.log("Player Hit!"); lives--; updateUI(); if (lives <= 0) { removeObject(playerShip); playerShip = null; endGame(); } else { playerShip.userData.invincible = true; playerShip.userData.invincibleTimer = 2000; playerShip.position.set(0,0,0); playerShip.rotation.set(0,0,0); playerShip.userData.velocity.set(0,0,0); } }
+function handlePlayerHit() { if (!playerShip || !playerShip.userData || playerShip.userData.invincible) return; console.log("Player Hit!"); createExplosion(playerShip.position.clone()); lives--; updateUI(); if (lives <= 0) { removeObject(playerShip); playerShip = null; endGame(); } else { playerShip.userData.invincible = true; playerShip.userData.invincibleTimer = 2000; playerShip.position.set(0,0,0); playerShip.rotation.set(0,0,0); playerShip.userData.velocity.set(0,0,0); } }
 function updateScore(p) { score += p; updateUI(); }
 function updateUI() { if(document.getElementById('score')) document.getElementById('score').textContent = score; if(document.getElementById('lives')) document.getElementById('lives').textContent = lives; }
 function wrapAroundScreen(pos, r) { const b=r*1.5, hw=WORLD_WIDTH/2, hh=WORLD_HEIGHT/2; if (pos.x > hw+b) pos.x = -hw-b+(pos.x-(hw+b)); if (pos.x < -hw-b) pos.x = hw+b+(pos.x-(-hw-b)); if (pos.y > hh+b) pos.y = -hh-b+(pos.y-(hh+b)); if (pos.y < -hh-b) pos.y = hh+b+(pos.y-(-hh-b)); }
@@ -313,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Restore global listeners
     window.addEventListener('keydown', handleKeyDown); // Handles game controls
-    window.addEventListener('keyup', handleKeyUp); 
+    window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('resize', onWindowResize);
-
 }); // <-- Make sure this closes the DOMContentLoaded listener
+
