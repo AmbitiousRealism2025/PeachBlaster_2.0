@@ -53,14 +53,59 @@ function showSplashScreen() {
     // Attempt to focus the window
     window.focus();
     // Ensure Spacebar handler is attached
-    window.removeEventListener('keydown', handleInitialSplashInput); // Remove any previous
-    window.addEventListener('keydown', handleInitialSplashInput); 
-    console.log('[PeachBlaster] Spacebar event listener attached for initial splash');
+    window.removeEventListener("keydown", handleInitialSplashInput); // Remove any previous listener
+    window.addEventListener("keydown", handleInitialSplashInput);
+    console.log("[PeachBlaster] Spacebar event listener attached for initial splash");
 }
-function handleSplashInput(event) { console.log(`DEBUG: handleSplashInput - KeyDown: key='${event.key}', code='${event.code}'`); if (event.key === ' ' || event.code === 'Space') { console.log("DEBUG: Spacebar detected!"); event.preventDefault(); window.removeEventListener('keydown', handleSplashInput); console.log("DEBUG: Listener removed."); document.getElementById('splashScreen').style.display = 'none'; document.getElementById('info').style.display = 'block'; if (!gameInitialized) { console.log("DEBUG: Calling init()."); init(); if (!renderer) { console.error("DEBUG: handleSplashInput - init() failed!"); alert("Critical Error: Graphics init failed. Check console."); return; } console.log("DEBUG: handleSplashInput - init() succeeded check."); } else { console.log("DEBUG: Already initialized."); } if (!renderer) { console.error("DEBUG: Renderer missing before countdown!"); alert("Error: Graphics component missing."); return; } console.log(">>> DEBUG: Calling startCountdown() NOW. <<<"); startCountdown(); } }
 
 // --- startCountdown Function Definition ---
-function startCountdown() { console.log(">>> startCountdown - Entered <<<"); let count = 5; const el = document.getElementById('countdown'); if (!el) { console.error("!!! CRITICAL: Countdown DIV not found!"); return; } console.log("startCountdown - Countdown element found."); try { el.style.display = 'block'; el.textContent = count; console.log("startCountdown - Element displayed, text set:", count); } catch (e) { console.error("!!! Error setting countdown display/text:", e); setTimeout(startGameplay, 5000); return; } if (countdownInterval) { console.log("startCountdown - Clearing previous interval:", countdownInterval); clearInterval(countdownInterval); countdownInterval = null; } console.log(">>> startCountdown - Attempting to set setInterval <<<"); try { countdownInterval = setInterval(() => { count--; if (count > 0) { if (el) el.textContent = count; } else { console.log("Interval - Countdown finished."); if(countdownInterval) clearInterval(countdownInterval); countdownInterval = null; if(el) el.style.display = 'none'; console.log("Interval - Calling startGameplay()."); startGameplay(); } }, 1000); if (!countdownInterval) { console.error("!!! startCountdown - setInterval failed!"); alert("Error: Failed to schedule countdown."); } } catch (e) { console.error("!!! Error setting interval:", e); alert("Error: Could not start countdown timer."); } }
+function startCountdown() { console.log(">>> startCountdown - Entered <<<");
+    let count = 5;
+    const el = document.getElementById("countdown");
+    if (!el) {
+        console.error("!!! CRITICAL: Countdown DIV not found!");
+        return;
+    }
+    console.log("startCountdown - Countdown element found. display=" + el.style.display);
+    try {
+        el.style.display = "block";
+        el.textContent = count;
+        console.log("startCountdown - Element displayed, text set:", count);
+    } catch (e) {
+        console.error("!!! Error setting countdown display/text:", e);
+        setTimeout(startGameplay, 5000);
+        return;
+    }
+    if (countdownInterval) {
+        console.log("startCountdown - Clearing previous interval:", countdownInterval);
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    console.log(">>> startCountdown - Attempting to set setInterval <<<");
+    try {
+        countdownInterval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                if (el) el.textContent = count;
+            } else {
+                console.log("Interval - Countdown finished.");
+                if (countdownInterval) clearInterval(countdownInterval);
+                countdownInterval = null;
+                if (el) el.style.display = "none";
+                console.log("Interval - Calling startGameplay().");
+                startGameplay();
+            }
+        }, 1000);
+        console.log("startCountdown - setInterval returned id:", countdownInterval);
+        if (!countdownInterval) {
+            console.error("!!! startCountdown - setInterval failed!");
+            alert("Error: Failed to schedule countdown.");
+        }
+    } catch (e) {
+        console.error("!!! Error setting interval:", e);
+        alert("Error: Could not start countdown timer.");
+}
+    }
 
 // --- Game Start Logic ---
 function startGameplay() { if (!renderer) { console.error("!!! startGameplay - Renderer missing!"); return; } console.log(">>> startGameplay - Entered <<<"); resetGameState(); clearGameObjects(); console.log("DEBUG: Resetting starfield blinks (Cleaned Up)."); resetStarfieldBlinks(); console.log("startGameplay - Creating player..."); playerShip = createPlayer(); if (playerShip && scene) { scene.add(playerShip); console.log("startGameplay - Player added."); } else { console.error("!!! startGameplay - Failed player create or scene missing!"); return; } console.log("startGameplay - Spawning peaches..."); spawnInitialPeaches(3); console.log(`startGameplay - Peaches array length: ${peaches.length}`); updateUI(); document.getElementById('info').style.display = 'block'; document.getElementById('gameOver').style.display = 'none'; gameRunning = true; gameOver = false; console.log(`startGameplay - gameRunning=${gameRunning}, gameOver=${gameOver}.`); console.log("startGameplay - Resetting clock..."); clock.start(); clock.getDelta(); lastBlinkCheckTime = clock.elapsedTime; console.log(">>> startGameplay - Calling animate() for the FIRST time... <<<"); animate(); console.log(">>> startGameplay - Exiting function. <<<"); }
@@ -194,7 +239,22 @@ function handleKeyDown(event) {
 function handleKeyUp(event) { const k = event.key.toLowerCase(); keysPressed[k] = false; }
 function shoot(shooter, isPlayer) { if (!shooter || !shooter.userData) return; const offset = (shooter.userData.radius||2)+1; const dir = new THREE.Vector3(0, 1, 0); dir.applyQuaternion(shooter.quaternion).normalize(); const pos = shooter.position.clone().add(dir.clone().multiplyScalar(offset)); const bullet = createBullet(pos, dir, isPlayer); if (isPlayer) playerBullets.push(bullet); if(scene) scene.add(bullet); else console.error("!!! Cannot add bullet - scene missing!"); }
 function detectCollisions() { if (!gameRunning || !playerShip || !playerShip.userData ) return; for (let i=playerBullets.length-1; i>=0; i--) { const b=playerBullets[i]; if (!b || !b.userData) continue; let hit=false; for (let j=peaches.length-1; j>=0; j--) { const p=peaches[j]; if (!p || !p.userData) continue; if (checkCollision(b, p)) { removeObject(b); playerBullets.splice(i, 1); breakPeach(p); hit=true; break; } } if (hit) continue; } if (!playerShip.userData.invincible) { for (let j=peaches.length-1; j>=0; j--) { const p=peaches[j]; if (!p || !p.userData) continue; if (checkCollision(playerShip, p)) { handlePlayerHit(); break; } } } }
-function checkCollision(o1, o2) { if (!o1 || !o2 || !o1.userData || !o2.userData || !o1.position || !o2.position) return false; const dSq=o1.position.distanceToSquared(o2.position); const r1=o1.userData.radius||1; const r2=o2.userData.radius||1; const rSumSq=(r1+r2)*(r1+r2); return dSq<=rSumSq; }
+function checkCollision(o1, o2) {
+    if (!o1 || !o2 || !o1.userData || !o2.userData || !o1.position || !o2.position) return false;
+    const dSq = o1.position.distanceToSquared(o2.position);
+    let r1 = o1.userData.radius;
+    let r2 = o2.userData.radius;
+    if (r1 == null) {
+        console.warn('checkCollision: object1 missing radius', o1);
+        r1 = 1;
+    }
+    if (r2 == null) {
+        console.warn('checkCollision: object2 missing radius', o2);
+        r2 = 1;
+    }
+    const rSumSq = (r1 + r2) * (r1 + r2);
+    return dSq <= rSumSq;
+}
 function handlePlayerHit() { if (!playerShip || !playerShip.userData || playerShip.userData.invincible) return; console.log("Player Hit!"); lives--; updateUI(); if (lives <= 0) { removeObject(playerShip); playerShip = null; endGame(); } else { playerShip.userData.invincible = true; playerShip.userData.invincibleTimer = 2000; playerShip.position.set(0,0,0); playerShip.rotation.set(0,0,0); playerShip.userData.velocity.set(0,0,0); } }
 function updateScore(p) { score += p; updateUI(); }
 function updateUI() { if(document.getElementById('score')) document.getElementById('score').textContent = score; if(document.getElementById('lives')) document.getElementById('lives').textContent = lives; }
@@ -231,27 +291,25 @@ function spawnInitialPeaches(count) {
 
 // NEW function to handle Spacebar on the *first* splash screen
 function handleInitialSplashInput(event) {
+    console.log(`DEBUG: handleInitialSplashInput - key='${event.key}', code='${event.code}'`);
     const initialSplash = document.getElementById('splashScreen');
-    // Only react if the first splash is visible and Spacebar is pressed
-    if (initialSplash && initialSplash.style.display !== 'none' && (event.key === ' ' || event.code === 'Space')) {
-        console.log("DEBUG: Spacebar detected on initial splash screen!");
+    if (!initialSplash) {
+        console.error('ERROR: #splashScreen element not found!');
+        return;
+    }
+    if (initialSplash.style.display !== 'none' && (event.key === ' ' || event.code === 'Space')) {
+        console.log('DEBUG: Spacebar detected on initial splash screen!');
         event.preventDefault();
-
         const controlsSplash = document.getElementById('controlsScreen');
-
-        initialSplash.style.display = 'none'; // Hide initial splash
-
+        initialSplash.style.display = 'none';
         if (controlsSplash) {
-            controlsSplash.style.display = 'flex'; // Show controls splash
-            console.log("DEBUG: Adding handleSpaceForControls listener.");
-            // Add listener for the *next* stage (controls screen)
+            controlsSplash.style.display = 'flex';
+            console.log('DEBUG: Adding handleSpaceForControls listener.');
             window.addEventListener('keydown', handleSpaceForControls);
         } else {
-            console.error("ERROR: Controls screen element not found!");
+            console.error('ERROR: Controls screen element not found!');
         }
-
-        // Remove this listener so it doesn't fire again
-        console.log("DEBUG: Removing handleInitialSplashInput listener.");
+        console.log('DEBUG: Removing handleInitialSplashInput listener.');
         window.removeEventListener('keydown', handleInitialSplashInput);
     }
 }
@@ -307,9 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial setup: Show the image splash screen
     showSplashScreen(); // This function now just displays #splashScreen
 
-    // Add the new listener for the initial splash screen
-    window.addEventListener('keydown', handleInitialSplashInput);
-    console.log("DEBUG: Added initial splash screen keydown listener.");
+    // showSplashScreen attaches the initial Spacebar listener
+    console.log("DEBUG: Splash screen displayed and listener attached by showSplashScreen().");
 
     // Restore global listeners
     window.addEventListener('keydown', handleKeyDown); // Handles game controls
